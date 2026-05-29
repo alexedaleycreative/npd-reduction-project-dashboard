@@ -127,7 +127,7 @@ async function main() {
   const templatePath = path.join(__dirname, '..', 'template.html');
   const template = fs.readFileSync(templatePath, 'utf8');
   const html = template.replace(
-    '/*__DASHBOARD_DATA__*/',
+    '/*__DASHBOARD_DATA__*/null',
     JSON.stringify(dashboardData)
   );
 
