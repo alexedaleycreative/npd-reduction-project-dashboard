@@ -1,0 +1,9 @@
+{
+  "name": "npd-reduction-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TSR84801 NPD Reduction — Stakeholder Dashboard (GitHub Pages)",
+  "scripts": {
+    "build": "node scripts/build.js"
+  }
+}
