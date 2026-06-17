@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSR84801 NPD Reduction — Project Dashboard</title>
+<style>
+:root{color-scheme:light;--pri:#FA4628;--sec:#FCC800;--sec-lt:#FFF8E1;--green:#2E7D32;--green-lt:#E8F5E9;--orange:#E65100;--orange-lt:#FFF3E0;--gray:#757575;--gray-lt:#F5F5F5;--text:#212121;--text2:#616161;--border:#E0E0E0;--bg:#F7F8FA;--card:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+#loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:12px;color:var(--text2)}
+.spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--pri);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Header */
+.hdr{background:linear-gradient(135deg,#FA4628 0%,#D93D1F 100%);color:#fff;padding:20px}
+.hdr h1{font-size:17px;font-weight:700;margin-bottom:2px}
+.hdr .sub{font-size:11px;opacity:.75}
+.hdr .status-row{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.badge{padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;border:2px solid #fff}
+.badge-green{background:#4CAF50;color:#fff}
+.badge-yellow{background:#FF9800;color:#fff}
+.badge-red{background:var(--pri);color:#fff}
+.pbar-wrap{flex:1;min-width:100px;display:flex;align-items:center;gap:8px}
+.pbar{flex:1;background:rgba(255,255,255,.2);border-radius:4px;height:8px;overflow:hidden;border:1.5px solid #fff}
+.pbar-fill{height:100%;background:#4CAF50;border-radius:4px;transition:width .6s}
+.pbar-label{font-size:11px;opacity:.85;white-space:nowrap}
+.updated{font-size:10px;opacity:.6;margin-top:6px}
+
+/* Content */
+.content{padding:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;overflow:hidden}
+.card-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.summary-text{font-size:13px;line-height:1.65;color:#333}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat .n{font-size:26px;font-weight:800}
+.stat .l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+.n-blue{color:var(--pri)}.n-green{color:var(--green)}.n-orange{color:var(--orange)}.n-red{color:var(--pri)}.n-gray{color:var(--gray)}
+
+/* Two-column */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:640px){.two-col{grid-template-columns:1fr}}
+
+/* Task items */
+.task-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid #F0F0F0}
+.task-item:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.task-info{flex:1;min-width:0}
+.task-name{font-size:12px;font-weight:500;word-break:break-word}
+.task-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.task-date{font-size:11px;white-space:nowrap;color:var(--text2);margin-top:4px}
+.overdue{color:var(--pri)!important;font-weight:600}
+.flag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-left:6px}
+.flag-late{background:#FFF3E0;color:#E65100}
+.flag-today{background:var(--sec-lt);color:#8B6914}
+.flag-gate{background:#FFEBE8;color:var(--pri)}
+.flag-overdue{background:#FFEBE8;color:var(--pri)}
+
+/* Gantt */
+.gantt-scroll{overflow-x:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
+.gantt{min-width:750px}
+.gantt-months{display:flex;border-bottom:2px solid var(--border);margin-left:220px}
+.gantt-month{text-align:center;font-size:10px;font-weight:700;color:#000000;text-transform:uppercase;letter-spacing:.3px;padding:4px 0;border-left:1px solid var(--border);flex-shrink:0}
+.gantt-month:first-child{border-left:none}
+.gantt-section{background:var(--sec-lt);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#000000;padding:5px 8px;border-bottom:1px solid #FFE082;display:flex}
+.gantt-section span{width:220px;flex-shrink:0}
+.gantt-row{display:flex;border-bottom:1px solid #F0F0F0;align-items:center;min-height:28px}
+.gantt-row:hover{background:#FAFAFA}
+.gantt-row.subtask-row{background:#FAFBFF}
+.gantt-row.subtask-row:hover{background:#F0F4FF}
+.gantt-label{width:220px;flex-shrink:0;padding:4px 8px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#000000}
+.gantt-label.expandable{cursor:pointer;color:#000000}
+.gantt-label.expandable:hover{text-decoration:underline}
+.gantt-label.sub{padding-left:28px;font-size:11px;color:#000000}
+.gantt-tl{flex:1;position:relative;height:22px}
+.gantt-bar{position:absolute;height:14px;top:4px;border-radius:3px;min-width:4px;cursor:default;transition:opacity .15s}
+.gantt-bar:hover{opacity:1!important;box-shadow:0 1px 6px rgba(0,0,0,.25);z-index:3}
+.gantt-bar .tip{display:none;position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;white-space:nowrap;z-index:20;pointer-events:none;line-height:1.4}
+.gantt-bar:hover .tip{display:block}
+.pct-fill{position:absolute;top:0;left:0;height:100%;border-radius:3px;background:rgba(0,0,0,.15)}
+.today-marker{position:absolute;top:0;bottom:0;width:2px;background:var(--pri);z-index:5;pointer-events:none}
+.today-marker::before{content:'TODAY';position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;font-weight:800;color:var(--pri);letter-spacing:.5px;white-space:nowrap}
+.month-grid-line{position:absolute;top:0;bottom:0;width:1px;background:#ECECEC;pointer-events:none}
+.expand-icon{display:inline-block;width:14px;font-size:9px;color:var(--text2);transition:transform .2s;text-align:center}
+.expand-icon.open{transform:rotate(90deg)}
+
+/* Stakeholder table */
+.stk-table{width:100%;border-collapse:collapse;font-size:12px}
+.stk-table th{text-align:left;padding:8px;background:var(--gray-lt);border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.3px}
+.stk-table td{padding:8px;border-bottom:1px solid #F0F0F0;vertical-align:top}
+.stk-table tr.gate td{background:var(--sec-lt);font-weight:600}
+.stk-table tr.today-row td{background:var(--sec-lt)}
+.stk-table .gate-tag{display:inline-block;background:#FFEBE8;color:var(--pri);font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;margin-right:4px}
+
+.kd-past td{opacity:.5;text-decoration:line-through}
+.kd-past td:last-child{text-decoration:none;opacity:.8}
+.empty-state{padding:24px;text-align:center;color:var(--text2);font-size:12px}
+.err{color:var(--pri);padding:16px;font-size:12px}
+</style>
+</head>
+<body>
+<div id="app"><div id="loading"><div class="spinner"></div>Loading dashboard…</div></div>
+<script>
+/* Data injected by build.js at build time */
+var DASHBOARD_DATA = /*__DASHBOARD_DATA__*/null;
+
+const PID='1214711975354621';
+const TL_START=new Date('2026-05-01T00:00:00');
+const TL_END=new Date('2026-12-01T00:00:00');
+const TL_DAYS=Math.round((TL_END-TL_START)/(864e5));
+const MONTHS=[
+  {name:'May',start:new Date('2026-05-01'),end:new Date('2026-06-01')},
+  {name:'Jun',start:new Date('2026-06-01'),end:new Date('2026-07-01')},
+  {name:'Jul',start:new Date('2026-07-01'),end:new Date('2026-08-01')},
+  {name:'Aug',start:new Date('2026-08-01'),end:new Date('2026-09-01')},
+  {name:'Sep',start:new Date('2026-09-01'),end:new Date('2026-10-01')},
+  {name:'Oct',start:new Date('2026-10-01'),end:new Date('2026-11-01')},
+  {name:'Nov',start:new Date('2026-11-01'),end:new Date('2026-12-01')}
+];
+
+const COLORS={'Complete':'#4CAF50','On Track':'#2196F3','Not Started':'#BDBDBD','In Jeopardy':'#FF9800','Delayed':'#F44336','On Hold':'#FF9800','Canceled':'#9E9E9E','Blocked':'#F44336'};
+
+const SUMMARY=`Brightspeed's TS Repair Call Center is experiencing a ~35.58% Fiber Non-Productive Dispatch (NPD) rate—unnecessary technician visits where issues stem from Wi-Fi conditions, customer equipment, or customer expectations rather than network failures. The project targets a 60–64% reduction in NPDs.
+
+Root causes include agents overriding Automate tool recommendations, insufficient wireless troubleshooting, customer pressure dynamics, and an application gap where agents know concepts but fail to apply them during high-pressure calls. The offshore vendor workforce adds complexity: English is a second language for many agents, and all training must cascade through a train-the-trainer model.
+
+This project delivers a four-module eLearning curriculum covering: (1) Navigating and Using Automate, (2) Asking Probing Questions and Searching the KB, (3) Wi-Fi Fundamentals, and (4) Educating the Customer and Troubleshooting Under Pressure. Each module follows a full ADDIE cycle with stakeholder sign-off gates, beta testing, and summative evaluation. Content prioritizes highly visual, plain-language, step-by-step instruction. Four Train-the-Leader VILT sessions deliver core concepts ahead of eLearning launch. The full curriculum targets November 2, 2026 go-live in SuccessFactors LMS.`;
+
+const KEY_DATES=[
+  {date:'2026-05-29',milestone:'Course Design / Storyboard sign-off',notes:'Required to proceed with development'},
+  {date:'2026-06-18',milestone:'VILT Session 1 delivery',notes:'Navigating and Using Automate'},
+  {date:'2026-06-25',milestone:'VILT Session 2 delivery',notes:'Asking Probing Questions and Searching the KB'},
+  {date:'2026-07-02',milestone:'VILT Session 3 delivery',notes:'Wi-Fi Fundamentals'},
+  {date:'2026-07-09',milestone:'VILT Session 4 delivery',notes:'Educating the Customer and Troubleshooting Under Pressure'},
+  {date:'2026-07-30',milestone:'Module 1 launch',notes:'Navigating and Using Automate — live in SuccessFactors LMS'},
+  {date:'2026-08-31',milestone:'Module 2 launch',notes:'Asking Probing Questions and Searching the KB'},
+  {date:'2026-09-30',milestone:'Module 3 launch',notes:'Wi-Fi Fundamentals'},
+  {date:'2026-10-30',milestone:'Module 4 launch',notes:'Educating the Customer and Troubleshooting Under Pressure'},
+  {date:'2026-11-02',milestone:'Full curriculum live',notes:'All four eLearning modules operational; NPD reduction measurement begins'},
+  {date:'2026-11-17',milestone:'Project close-out',notes:'Project summary presented; files archived; project marked complete'}
+];
+
+/* Stakeholder event mapping — dates pulled from Asana tasks */
+var STK_MAPPING=[
+  {taskGid:'1215034446800721',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Course Design / Storyboard approval',gate:true},
+  {taskGid:'1215034446800436',dateField:'Start Date:',who:'Jonathan Zieten',action:'SME interview — VILT Session 1: Navigating and Using Automate (~30 min)',gate:false},
+  {taskGid:'1215034446800438',dateField:'Start Date:',who:'Jonathan Zieten',action:'SME interview — VILT Session 2: Probing Questions & Searching the KB (~30 min)',gate:false},
+  {taskGid:'1215034446800440',dateField:'Start Date:',who:'Jonathan Zieten',action:'SME interview — VILT Session 3: Wi-Fi Fundamentals (~30 min)',gate:false},
+  {taskGid:'1215034446800442',dateField:'Start Date:',who:'Jonathan Zieten',action:'SME interview — VILT Session 4: Educating the Customer (~30 min)',gate:false},
+  {taskGid:'1214716000463168',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Module 1 Course Design + Formative Evaluation Plan',gate:true},
+  {taskGid:'1214716000463173',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Module 1 beta testing: review materials and provide feedback',gate:false},
+  {taskGid:'1215034446800378',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Review Module 1 summative evaluation findings',gate:false},
+  {taskGid:'1215091364781573',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Module 2 Course Design + Formative Evaluation Plan',gate:true},
+  {taskGid:'1215073813147972',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Module 2 beta testing: review and feedback',gate:false},
+  {taskGid:'1215073888312982',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Review Module 2 summative evaluation findings',gate:false},
+  {taskGid:'1215074143919288',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Module 3 Course Design + Formative Evaluation Plan',gate:true},
+  {taskGid:'1215087527292446',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Module 3 beta testing: review and feedback',gate:false},
+  {taskGid:'1215087527302322',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Review Module 3 summative evaluation findings',gate:false},
+  {taskGid:'1215074144293809',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Module 4 Course Design + Formative Evaluation Plan',gate:true},
+  {taskGid:'1215074161717171',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Module 4 beta testing: review and feedback',gate:false},
+  {taskGid:'1215087527652499',dateField:'Due Date:',who:'All stakeholders',action:'Full four-module curriculum live in SuccessFactors LMS',gate:false},
+  {taskGid:'1215074144314617',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Review Module 4 summative evaluation findings',gate:false},
+  {taskGid:'1214713089250252',dateField:'Due Date:',who:'All stakeholders, SMEs',action:'Project close-out meeting',gate:false}
+];
+
+/* Resolve stakeholder dates from Asana task data */
+function buildStkEvents(rawTasks){
+  var taskMap={};
+  rawTasks.forEach(function(t){taskMap[t.gid]=t});
+  return STK_MAPPING.map(function(m){
+    var task=taskMap[m.taskGid];
+    var dateStr=null;
+    if(task){
+      var fields=task.custom_fields||[];
+      for(var i=0;i<fields.length;i++){
+        if(fields[i].name===m.dateField&&fields[i].display_value){
+          dateStr=fields[i].display_value.split('T')[0];
+          break;
+        }
+      }
+    }
+    return{date:dateStr,who:m.who,action:m.action,gate:m.gate};
+  }).filter(function(e){return e.date});
+}
+
+/* Helpers */
+function cf(task,name){
+  if(!task.custom_fields)return null;
+  var f=task.custom_fields.find(function(c){return c.name===name});
+  return f?f.display_value:null;
+}
+function pd(s){
+  if(!s)return null;
+  return new Date(s.split('T')[0]+'T12:00:00');
+}
+function fd(d){
+  if(!d)return '—';
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function pct2tl(d){
+  var ms=d.getTime()-TL_START.getTime();
+  return Math.max(0,Math.min(100,(ms/(TL_END.getTime()-TL_START.getTime()))*100));
+}
+function sameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
+
+function parseTask(t){
+  var startStr=cf(t,'Start Date');
+  var dueStr=cf(t,'Due Date:');
+  var start=pd(startStr);
+  var due=pd(dueStr);
+  var status=cf(t,'Status_')||'Not Started';
+  var pctRaw=cf(t,'% Done');
+  var pct=pctRaw?parseFloat(pctRaw):0;
+  var estHrs=cf(t,'Est. Hrs');
+  var actHrs=cf(t,'Actual Hrs');
+  var section='',sectionGid='';
+  if(t.memberships&&t.memberships[0]&&t.memberships[0].section){
+    section=t.memberships[0].section.name||'';
+    sectionGid=t.memberships[0].section.gid||'';
+  }
+  return{gid:t.gid,name:(t.name||'').trim(),section:section,sectionGid:sectionGid,start:start,due:due,status:status,pct:pct,estHrs:estHrs,actHrs:actHrs,completed:t.completed,assignee:t.assignee?t.assignee.name:'',numSubtasks:t.num_subtasks||0};
+}
+
+/* Section ordering */
+var SECTION_ORDER=[
+  '1214716000463154','1215034446800435','1215034446800407',
+  '1215034446800481','1215034446800548','1215034446800550','1215034446800412'
+];
+
+/* Main */
+function init(){
+  if(!DASHBOARD_DATA||!DASHBOARD_DATA.tasks){
+    document.getElementById('app').innerHTML='<div class="err">No data found. The dashboard may need to be rebuilt.</div>';
+    return;
+  }
+
+  var proj=DASHBOARD_DATA.project;
+  var stkEvents=buildStkEvents(DASHBOARD_DATA.tasks);
+  var tasks=DASHBOARD_DATA.tasks.map(parseTask);
+  render(proj,tasks,stkEvents);
+}
+
+function render(proj,tasks,stkEvents){
+  var today=new Date();today.setHours(12,0,0,0);
+  var total=tasks.length;
+  var done=tasks.filter(function(t){return t.completed||t.status==='Complete'}).length;
+  var pctDone=total?Math.round(done/total*100):0;
+
+  /* Week boundaries (Mon-Sun) */
+  var dayOfWeek=today.getDay();
+  var mon=new Date(today);mon.setDate(today.getDate()-(dayOfWeek===0?6:dayOfWeek-1));mon.setHours(0,0,0,0);
+  var sun=new Date(mon);sun.setDate(mon.getDate()+6);sun.setHours(23,59,59,999);
+
+  /* Due this week */
+  var dueThisWeek=tasks.filter(function(t){
+    if(!t.due)return false;
+    return t.due>=mon&&t.due<=sun;
+  });
+
+  /* In progress: On Track */
+  var inProgress=tasks.filter(function(t){return t.status==='On Track'&&!t.completed});
+
+  /* Late starts: Not Started but start date past */
+  var lateStarts=tasks.filter(function(t){return t.status==='Not Started'&&t.start&&t.start<today&&!t.completed});
+
+  /* Stakeholder events: next 30 days */
+  var stkEnd=new Date(today);stkEnd.setDate(stkEnd.getDate()+30);
+  var stkFiltered=(stkEvents||[]).filter(function(e){
+    var d=new Date(e.date+'T12:00:00');
+    return d>=new Date(today.getFullYear(),today.getMonth(),today.getDate())&&d<=stkEnd;
+  });
+
+  /* Group tasks by section */
+  var sections=new Map();
+  var sectionNames=new Map();
+  tasks.forEach(function(t){
+    var key=t.sectionGid||'other';
+    if(!sections.has(key))sections.set(key,[]);
+    sections.get(key).push(t);
+    if(t.section)sectionNames.set(key,t.section);
+  });
+
+  /* Status color */
+  var statusColor=proj.current_status?proj.current_status.color:'green';
+  var badgeClass=statusColor==='green'?'badge-green':statusColor==='yellow'||statusColor==='yellow-orange'?'badge-yellow':'badge-red';
+  var statusLabel=statusColor==='green'?'On Track':statusColor==='yellow'||statusColor==='yellow-orange'?'At Risk':'Off Track';
+
+  /* Formatted fetch time */
+  var fetchedAt=DASHBOARD_DATA.fetchedAt?new Date(DASHBOARD_DATA.fetchedAt).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}):'Unknown';
+
+  /* Pre-build Key Dates rows */
+  var keyDatesRows=KEY_DATES.map(function(m){
+    var d=new Date(m.date+'T12:00:00');
+    var isPast=d<new Date(today.getFullYear(),today.getMonth(),today.getDate());
+    var isToday=sameDay(d,today);
+    var cls=isToday?'today-row':isPast?'kd-past':'';
+    var icon=isPast?'✅':isToday?'🔶':'⭕';
+    return '<tr class="'+cls+'"><td style="font-weight:500">'+esc(m.milestone)+'</td><td style="white-space:nowrap">'+fd(d)+(isToday?' <span class="flag flag-today">TODAY</span>':'')+'</td><td>'+esc(m.notes)+'</td><td style="text-align:center">'+icon+'</td></tr>';
+  }).join('');
+
+  /* Build stakeholder rows */
+  var stkRows='';
+  if(stkFiltered.length){
+    stkRows='<table class="stk-table"><thead><tr><th>Date</th><th>Who</th><th>Action Required</th></tr></thead><tbody>';
+    stkFiltered.forEach(function(e){
+      var d=new Date(e.date+'T12:00:00');
+      var isToday=sameDay(d,today);
+      var cls=e.gate?'gate':isToday?'today-row':'';
+      stkRows+='<tr class="'+cls+'"><td style="white-space:nowrap">'+fd(d)+(isToday?' <span class="flag flag-today">TODAY</span>':'')+'</td><td>'+e.who+'</td><td>'+(e.gate?'<span class="gate-tag">Sign-Off Gate</span>':'')+e.action+'</td></tr>';
+    });
+    stkRows+='</tbody></table>';
+  }else{
+    stkRows='<div class="empty-state">No stakeholder actions in the next 30 days</div>';
+  }
+
+  /* Build Due This Week items */
+  var dtwHtml='';
+  if(dueThisWeek.length){
+    dueThisWeek.forEach(function(t){
+      var isOverdue=t.due<today&&!t.completed&&t.status!=='Complete';
+      var isDone=t.completed||t.status==='Complete';
+      var isToday2=sameDay(t.due,today);
+      dtwHtml+='<div class="task-item"><div class="dot" style="background:'+(isDone?COLORS['Complete']:isOverdue?COLORS['Delayed']:(COLORS[t.status]||'#999'))+'"></div><div class="task-info"><div class="task-name" style="'+(isDone?'text-decoration:line-through;opacity:.6':'')+'">'+esc(t.name)+(isToday2?'<span class="flag flag-today">TODAY</span>':'')+(isOverdue?'<span class="flag flag-overdue">OVERDUE</span>':'')+'</div><div class="task-meta">'+t.section.split(':')[0]+'</div></div><div class="task-date '+(isOverdue?'overdue':'')+'">'+fd(t.due)+'</div></div>';
+    });
+  }else{
+    dtwHtml='<div class="empty-state">No tasks due this week</div>';
+  }
+
+  /* Build In Progress items */
+  var ipHtml='';
+  if(inProgress.length){
+    inProgress.forEach(function(t){
+      var pctLabel=t.pct?Math.round(t.pct*100)+'%':'0%';
+      ipHtml+='<div class="task-item"><div class="dot" style="background:'+COLORS['On Track']+'"></div><div class="task-info"><div class="task-name">'+esc(t.name)+'</div><div class="task-meta">'+t.section.split(':')[0]+' &middot; '+pctLabel+' done</div></div><div class="task-date">'+fd(t.due)+'</div></div>';
+    });
+  }else{
+    ipHtml='<div class="empty-state">No tasks currently in progress</div>';
+  }
+
+  /* Late starts */
+  var lsHtml='';
+  if(lateStarts.length){
+    lsHtml='<div style="margin-top:12px;padding-top:10px;border-top:2px solid #FFF3E0"><div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#E65100;margin-bottom:6px">⚠ Potential Delays — Past Start Date</div>';
+    lateStarts.forEach(function(t){
+      lsHtml+='<div class="task-item"><div class="dot" style="background:#FF9800"></div><div class="task-info"><div class="task-name">'+esc(t.name)+'<span class="flag flag-late">NOT STARTED</span></div><div class="task-meta">Start: '+fd(t.start)+' &middot; Due: '+fd(t.due)+'</div></div></div>';
+    });
+    lsHtml+='</div>';
+  }
+
+  /* Month headers */
+  var monthHeaders='';
+  MONTHS.forEach(function(m){
+    var days=Math.round((m.end-m.start)/864e5);
+    var pct=(days/TL_DAYS)*100;
+    monthHeaders+='<div class="gantt-month" style="width:'+pct+'%">'+m.name+'</div>';
+  });
+
+  var html='<div class="hdr">'
+    +'<h1>TSR84801 NPD Reduction</h1>'
+    +'<div class="sub">Project Dashboard &middot; Owner: Alex Daley</div>'
+    +'<div class="status-row">'
+    +'<span class="badge '+badgeClass+'">'+statusLabel+'</span>'
+    +'<div class="pbar-wrap">'
+    +'<div class="pbar"><div class="pbar-fill" style="width:'+pctDone+'%"></div></div>'
+    +'<span class="pbar-label" style="font-size:17px;font-weight:700;opacity:1">'+pctDone+'%</span>'
+    +'</div></div>'
+    +'<div class="updated">Last updated: '+fetchedAt+'</div>'
+    +'</div>'
+    +'<div class="content">'
+
+    /* Summary */
+    +'<div class="card"><div class="card-title">📋 Project Summary</div>'
+    +'<div class="summary-text">'+SUMMARY.replace(/\n\n/g,'</p><p style="margin-top:8px">').replace(/\n/g,' ')+'</div></div>'
+
+    /* Stats */
+    +'<div class="stats">'
+    +'<div class="stat"><div class="n n-blue">'+total+'</div><div class="l">Total Tasks</div></div>'
+    +'<div class="stat"><div class="n n-green">'+done+'</div><div class="l">Completed</div></div>'
+    +'<div class="stat"><div class="n n-blue">'+inProgress.length+'</div><div class="l">In Progress</div></div>'
+    +'<div class="stat"><div class="n '+(lateStarts.length?'n-orange':'n-gray')+'">'+lateStarts.length+'</div><div class="l">Late Starts</div></div>'
+    +'<div class="stat"><div class="n '+(dueThisWeek.filter(function(t){return!t.completed&&t.status!=='Complete'}).length?'n-red':'n-gray')+'">'+dueThisWeek.length+'</div><div class="l">Due This Week</div></div>'
+    +'</div>'
+
+    /* Stakeholder */
+    +'<div class="card"><div class="card-title">🤝 What I Need From You <span style="font-size:10px;font-weight:400;color:var(--text2);margin-left:4px">Next 30 days</span></div>'
+    +stkRows+'</div>'
+
+    /* Key Dates */
+    +'<div class="card"><div class="card-title">🎯 Key Dates</div>'
+    +'<table class="stk-table"><thead><tr><th>Milestone</th><th>Target Date</th><th>Notes</th><th></th></tr></thead>'
+    +'<tbody>'+keyDatesRows+'</tbody></table></div>'
+
+    /* Gantt */
+    +'<div class="card"><div class="card-title">📅 Project Timeline</div>'
+    +'<div style="font-size:11px;color:#000000;margin-bottom:6px">Click a task with subtasks to expand. Hover bars for details.</div>'
+    +'<div class="gantt-scroll"><div class="gantt">'
+    +'<div class="gantt-months">'+monthHeaders+'</div>'
+    +'<div id="gantt-body"></div>'
+    +'</div></div></div>'
+
+    /* Two-col */
+    +'<div class="two-col">'
+    +'<div class="card"><div class="card-title">⏰ Due This Week <span style="font-size:10px;font-weight:400;color:var(--text2);margin-left:4px">'+fd(mon)+' – '+fd(sun)+'</span></div>'+dtwHtml+'</div>'
+    +'<div class="card"><div class="card-title">🚧 In Progress</div>'+ipHtml+lsHtml+'</div>'
+    +'</div>'
+
+    +'</div>';
+
+  document.getElementById('app').innerHTML=html;
+
+  /* Render Gantt rows */
+  var ganttBody=document.getElementById('gantt-body');
+  var orderedSections=SECTION_ORDER.filter(function(s){return sections.has(s)});
+  sections.forEach(function(_,key){if(orderedSections.indexOf(key)===-1)orderedSections.push(key)});
+
+  orderedSections.forEach(function(secGid){
+    var secTasks=sections.get(secGid)||[];
+    var secName=sectionNames.get(secGid)||'Other';
+
+    var secRow=document.createElement('div');
+    secRow.className='gantt-section';
+    secRow.innerHTML='<span>'+shortSection(secName)+'</span><div style="flex:1;position:relative;height:20px">'+monthGridLines()+'</div>';
+    ganttBody.appendChild(secRow);
+
+    secTasks.forEach(function(t){
+      var row=createGanttRow(t,false);
+      ganttBody.appendChild(row);
+    });
+  });
+
+  /* Single today overlay */
+  var todayDate=new Date();todayDate.setHours(12,0,0,0);
+  if(todayDate>=TL_START&&todayDate<=TL_END){
+    ganttBody.style.position='relative';
+    var pct=pct2tl(todayDate);
+    var overlay=document.createElement('div');
+    overlay.style.cssText='position:absolute;top:0;bottom:0;left:220px;right:0;pointer-events:none;z-index:6';
+    overlay.innerHTML='<div style="position:absolute;top:0;bottom:0;left:'+pct+'%;width:2px;background:var(--pri)"></div><div style="position:absolute;top:-2px;left:'+pct+'%;transform:translateX(-50%);font-size:8px;font-weight:800;color:var(--pri);letter-spacing:.5px;white-space:nowrap;background:var(--card);padding:0 3px;border-radius:2px">TODAY</div>';
+    ganttBody.appendChild(overlay);
+  }
+}
+
+function shortSection(name){
+  return name.length>60?name.substring(0,57)+'...':name;
+}
+
+function monthGridLines(){
+  return MONTHS.slice(1).map(function(m){
+    var pct=pct2tl(m.start);
+    return '<div class="month-grid-line" style="left:'+pct+'%"></div>';
+  }).join('');
+}
+
+function createGanttRow(t,isSub){
+  var row=document.createElement('div');
+  row.className='gantt-row'+(isSub?' subtask-row':'');
+  row.dataset.gid=t.gid;
+
+  var hasChildren=!isSub&&t.numSubtasks>0;
+  var label=document.createElement('div');
+  label.className='gantt-label'+(isSub?' sub':'')+(hasChildren?' expandable':'');
+  label.title=t.name;
+  if(hasChildren){
+    label.innerHTML='<span class="expand-icon" data-gid="'+t.gid+'">▶</span> '+esc(t.name);
+    label.addEventListener('click',function(){toggleSubtasks(t.gid,row,label.querySelector('.expand-icon'))});
+  }else{
+    label.textContent=(isSub?'└ ':'')+t.name;
+  }
+
+  var tl=document.createElement('div');
+  tl.className='gantt-tl';
+  tl.innerHTML=monthGridLines();
+
+  if(t.start&&t.due){
+    var left=pct2tl(t.start);
+    var right=pct2tl(t.due);
+    var width=Math.max(right-left,0.5);
+    var color=COLORS[t.status]||'#999';
+    var pctW=t.pct?t.pct*100:0;
+    var bar=document.createElement('div');
+    bar.className='gantt-bar';
+    bar.style.cssText='left:'+left+'%;width:'+width+'%;background:'+color+';opacity:'+(t.completed||t.status==='Complete'?0.5:0.85);
+    if(pctW>0&&pctW<100){
+      bar.innerHTML='<div class="pct-fill" style="width:'+pctW+'%"></div>';
+    }
+    bar.innerHTML+='<div class="tip"><strong>'+esc(t.name)+'</strong><br>'+fd(t.start)+' – '+fd(t.due)+'<br>Status: '+t.status+(t.pct?' · '+Math.round(t.pct*100)+'% done':'')+'</div>';
+    tl.appendChild(bar);
+  }else if(t.due){
+    var left2=pct2tl(t.due);
+    var color2=COLORS[t.status]||'#999';
+    var marker=document.createElement('div');
+    marker.style.cssText='position:absolute;left:'+left2+'%;top:5px;width:12px;height:12px;background:'+color2+';transform:translateX(-6px) rotate(45deg);border-radius:2px;cursor:default;opacity:'+(t.completed?0.5:0.85);
+    var tip=document.createElement('div');
+    tip.className='tip';
+    tip.innerHTML='<strong>'+esc(t.name)+'</strong><br>Due: '+fd(t.due)+'<br>Status: '+t.status;
+    tip.style.cssText='display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:6px 10px;border-radius:4px;font-size:11px;white-space:nowrap;z-index:20';
+    marker.appendChild(tip);
+    marker.addEventListener('mouseenter',function(){tip.style.display='block'});
+    marker.addEventListener('mouseleave',function(){tip.style.display='none'});
+    tl.appendChild(marker);
+  }
+
+  row.appendChild(label);
+  row.appendChild(tl);
+  return row;
+}
+
+var expandedTasks={};
+
+function toggleSubtasks(parentGid,parentRow,icon){
+  if(expandedTasks[parentGid]){
+    /* Collapse */
+    delete expandedTasks[parentGid];
+    icon.classList.remove('open');
+    var next=parentRow.nextElementSibling;
+    while(next&&next.classList.contains('subtask-row')&&next.dataset.parent===parentGid){
+      var toRemove=next;
+      next=next.nextElementSibling;
+      toRemove.remove();
+    }
+    return;
+  }
+
+  expandedTasks[parentGid]=true;
+  icon.classList.add('open');
+
+  /* Read from pre-fetched subtask data */
+  var subtasks=DASHBOARD_DATA.subtaskMap[parentGid];
+  if(!subtasks||!subtasks.length){
+    var emptyRow=document.createElement('div');
+    emptyRow.className='gantt-row subtask-row';
+    emptyRow.dataset.parent=parentGid;
+    emptyRow.innerHTML='<div class="gantt-label sub" style="color:var(--text2);font-style:italic">No subtasks</div><div class="gantt-tl"></div>';
+    parentRow.after(emptyRow);
+    setTimeout(function(){emptyRow.remove()},2000);
+    delete expandedTasks[parentGid];
+    icon.classList.remove('open');
+    return;
+  }
+
+  var insertAfter=parentRow;
+  subtasks.forEach(function(st){
+    var parsed=parseTask(st);
+    var row=createGanttRow(parsed,true);
+    row.dataset.parent=parentGid;
+    insertAfter.after(row);
+    insertAfter=row;
+  });
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+init();
+</script>
+</body>
+</html>
